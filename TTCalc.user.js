@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015012308
+// @version      2015012317
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -102,7 +102,7 @@ function workwork(prefix, fff) {
 function ttcalcjijin() {
     workwork("#tb_0_0", ["#pft0", "#fund_benifit"]);
     workwork("#tb_0_zs", ["#zs_benifit"]);
-    $$("#all_value").html($$("#all_value").html().split("(")[0] + "(" + "++" + totalbenefit_all  + ")");
+    $$("#all_value").html($$("#all_value").html().split("(")[0] + "(" + (totalbenefit_all >= 0 ? "+": "") + totalbenefit_all.toFixed(2)  + ")");
     $$(".qingchusj").click(cleardata);
 }
 
@@ -169,6 +169,7 @@ function parsesxf(fcode) {
 }
 
 if (window.location.pathname.search(/\/MyAssets\/Default/i) == 0) {
+    $$("#zspro span.alinks").hide();
 	setInterval(ttcalcjijin, 2000);
 } else if (window.location.pathname.search(/\/favor\.html/i) == 0) {
     updateguzhi();
