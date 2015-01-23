@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015012305
+// @version      2015012308
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -33,27 +33,27 @@ GM_xmlhttpRequest({
 });
 */
 
-
-$$.each(GM_listValues(), function(key) {
-    if (/^jijin_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key)) {
+$$.each(GM_listValues(), function(idx, key) {
+    if (/^feilv_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key)) {
+        console.log(key, GM_getValue(key));
   	} else {
 	  	GM_deleteValue(key);
   	}
 });
 
-console.log(GM_listValues())
-
-
-function updatesxf(fcode) {
-    var newval = parseFloat($$("#shuhui_" + fcode).val());
-    GM_setValue('jijin_' + fcode, newval);
-}
 
 totalbenefit_all = 0.0;
 
+function cleardata() {
+    $$.each(GM_listValues(), function(idx, key) {
+        GM_deleteValue(key);
+    });
+    window.location = '';
+}
+
 function workwork(prefix, fff) {
     if ($$(prefix + " thead") && !jjjprocessed[prefix]) {
-		$$(prefix + " thead tr").append("<th>卖出手续费</th><th>扣除后收益</th>");
+		$$(prefix + " thead tr").append("<th>卖出手续费<br/>(<a class=\"qingchusj\">清除数据</a>)</th><th>扣除后收益</th>");
        	jjjprocessed[prefix] = true;
         var total_shouyi = 0;
         $$(prefix + " tbody tr").each(function (idx) {
@@ -61,16 +61,33 @@ function workwork(prefix, fff) {
             if ($$(this).attr('class') == "hideTr hide") {
                 return;
             }
-            var val = GM_getValue("jijin_" + fcode);
-            if (val === undefined) {
-            	val = 999.0;
+            var oval = GM_getValue("feilv_" + fcode);
+            var val = 0.0;
+            if (oval === undefined) {
+            	val = 0.0
+            } else {
+                val = oval[0][1];
             }
             var original_shouyi = parseFloat($$(this).find($$("td span"))[4].innerHTML);
             var total_value = parseFloat($$(this).find($$("td span"))[3].innerHTML);
             var real_shouyi = original_shouyi - total_value * val / 100.0;
             GM_setValue("shizhi_" + fcode, total_value);
-            GM_setValue("jijin_" + fcode, val);
-            $$(this).append('<td><input type="text" value="' + val + '" id="shuhui_' + fcode +'" size=1/></td>');
+            if (oval !== undefined) {
+                $$(this).append('<td><select style="width: 75px;" id="shuhui_' + fcode + '"></select>');
+                $$.each(oval, function(idx) {
+                    var apdxstr = '';
+                    if (idx == 0) apdxstr = ' selected=selected';
+                    $$("#shuhui_" + fcode).append('<option value="' + oval[idx][1] + '"' + apdxstr + '>' + oval[idx][0] + '</option>');
+                });
+                $$("#shuhui_" + fcode).change(function() {
+                    var feilvs = $$(this).find($$("option:selected")).text();
+                    var feilvv = parseFloat($$(this).find($$("option:selected")).val());
+                    oval[0] = [feilvs, feilvv];
+                    GM_setValue("feilv_" + fcode, oval);
+                });
+            } else {
+                $$(this).append('<td><a target="_blank" href="http://fund.eastmoney.com/f10/jjfl_' + fcode + '.html">点击获取</a></td>')
+            }
             $$("#shuhui_" + fcode).change(function() { updatesxf(fcode) });
             $$(this).append('<td><span id="shouyi_' + fcode + '">' + real_shouyi.toFixed(2) + '(' +  (real_shouyi * 100.0 / (total_value - original_shouyi)).toFixed(2) +'%)</span></td>');
             total_shouyi += parseFloat(real_shouyi.toFixed(2));
@@ -86,6 +103,7 @@ function ttcalcjijin() {
     workwork("#tb_0_0", ["#pft0", "#fund_benifit"]);
     workwork("#tb_0_zs", ["#zs_benifit"]);
     $$("#all_value").html($$("#all_value").html().split("(")[0] + "(" + "++" + totalbenefit_all  + ")");
+    $$(".qingchusj").click(cleardata);
 }
 
 console.log("function def end")
@@ -124,13 +142,40 @@ function updateguzhi() {
     $$("#jingzhi_zengzhang").html("增长值(" + $$("#jingzhi_zengzhang").html() + ")")
 }
 
+function parsesxf(fcode) {
+    $$(".w790").each(function(idx) {
+        if ($$(this).html().indexOf("赎回费率") != -1 && $$(this).html().indexOf("适用金额") != -1) {
+            var feilv = [["请选择赎回费率", NaN]];
+            var chosen_feilv = undefined;
+            if (GM_getValue("feilv_" + fcode) != undefined) {
+                chosen_feilv = GM_getValue("feilv_" + fcode)[0];
+            }
+            var chosen_feilv_valid = false;
+            $$(this).find($$("tbody tr")).each(function(idx) {
+                var feilvdesc = $$(this).text().replace(/-*/i, '');
+                var feilvv = parseFloat($$(this).find($$("td")).last().text().split('%')[0])
+                feilvdesc = feilvv + "% (" + feilvdesc + ")";
+                feilv.push([feilvdesc, feilvv]);
+                if (chosen_feilv == [feilvdesc, feilvv]) {
+                    chosen_feilv_valid = true;
+                }
+            });
+            if (chosen_feilv_valid) {
+                feilv[0] = chosen_feilv;
+            }
+            GM_setValue("feilv_" + fcode, feilv);
+        }
+    });
+}
+
 if (window.location.pathname.search(/\/MyAssets\/Default/i) == 0) {
 	setInterval(ttcalcjijin, 2000);
 } else if (window.location.pathname.search(/\/favor\.html/i) == 0) {
     updateguzhi();
 	setInterval(updateguzhi, 2000);
 } else if (window.location.pathname.search(/\/f10\/jjfl_.*/i) == 0) {
-    alert(1);
+    var fcode = window.location.pathname.split('_')[1].split('.')[0];
+    parsesxf(fcode);
 }
     
 console.log("process end")
