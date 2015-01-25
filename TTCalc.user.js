@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015012509
+// @version      2015012510
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -128,7 +128,7 @@ function updateguzhi() {
     }
     $$("#guzhi_zengzhang").html('0');
     $$("#jingzhi_zengzhang").html('0');
-    var v_sum_guzhi = [0, 0], v_sum_jingzhi = [0, 0];
+    var v_sum_guzhi = [0, 0], v_sum_jingzhi = [0, 0], v_sum_guzhis = [0, 0];
     $$("#kf_m_0 tbody tr").each(function(idx) {
         var fcode = $$(this).find($$(".jc a")).toArray()[0].innerHTML;
         var value_price = GM_getValue("fene_" + fcode);
@@ -145,14 +145,18 @@ function updateguzhi() {
             if (idx == 5) v_zuixinjingzhi = parseFloat($$(this).html());
             if (idx == 10) v_shangqijingzhi = parseFloat($$(this).html());
         });
-        var v_guzhi_zengzhang = [parseFloat(((v_jingzhigusuan - v_shangqijingzhi) * (value_price[0])).toFixed(2))
-        						,parseFloat(((v_jingzhigusuan - v_shangqijingzhi) * (value_price[1])).toFixed(2))];
+        var v_guzhi_zengzhang = [parseFloat(((v_jingzhigusuan - v_zuixinjingzhi) * (value_price[0])).toFixed(2))
+        						,parseFloat(((v_jingzhigusuan - v_zuixinjingzhi) * (value_price[1])).toFixed(2))];
+        var v_guzhi_shangqi = [parseFloat(((v_jingzhigusuan - v_shangqijingzhi) * (value_price[0])).toFixed(2))
+        					  ,parseFloat(((v_jingzhigusuan - v_shangqijingzhi) * (value_price[1])).toFixed(2))];
         var v_jingzhi_zengzhang = [parseFloat(((v_zuixinjingzhi - v_shangqijingzhi) * (value_price[0])).toFixed(2))
                                   ,parseFloat(((v_zuixinjingzhi - v_shangqijingzhi) * (value_price[1])).toFixed(2))];
-        $$(this).find($$("#guzhizengzhang_" + fcode)).html(v_guzhi_zengzhang.join('/'));
+        $$(this).find($$("#guzhizengzhang_" + fcode)).html('<span title="相对上期净值：' + v_guzhi_shangqi.join('/') + '">' + v_guzhi_zengzhang.join('/') + '</span>');
         $$(this).find($$("#jingzhizengzhang_" + fcode)).html(v_guzhi_zengzhang.join('/'));
         v_sum_guzhi[0] += v_guzhi_zengzhang[0];
         v_sum_guzhi[1] += v_guzhi_zengzhang[1];
+        v_sum_guzhis[0] += v_guzhi_shangqi[0];
+        v_sum_guzhis[1] += v_guzhi_shangqi[1];
         v_sum_jingzhi[0] += v_jingzhi_zengzhang[0];
         v_sum_jingzhi[1] += v_jingzhi_zengzhang[1];
         /*
@@ -167,7 +171,7 @@ function updateguzhi() {
         $$("#jingzhi_zengzhang").html((parseFloat($$("#jingzhi_zengzhang").html()) + (value_price * jingzhi_zengzhanglv / 100.0)).toFixed(2));
         */
     });
-    $$("#guzhi_zengzhang").html("增长值(" + v_sum_guzhi.map(toFixed2).join('/') + ")")
+    $$("#guzhi_zengzhang").html("增长值(<span title=\"相对上期净值：" + v_sum_guzhis.map(toFixed2).join('/') + "\">" + v_sum_guzhi.map(toFixed2).join('/') + "</span>)")
     $$("#jingzhi_zengzhang").html("增长值(" + v_sum_jingzhi.map(toFixed2).join('/') + ")")
 }
 
