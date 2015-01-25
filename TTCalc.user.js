@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015012317
+// @version      2015012509
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -34,7 +34,7 @@ GM_xmlhttpRequest({
 */
 
 $$.each(GM_listValues(), function(idx, key) {
-    if (/^feilv_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key)) {
+    if (/^feilv_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key)) {
         console.log(key, GM_getValue(key));
   	} else {
 	  	GM_deleteValue(key);
@@ -72,6 +72,8 @@ function workwork(prefix, fff) {
             var total_value = parseFloat($$(this).find($$("td span"))[3].innerHTML);
             var real_shouyi = original_shouyi - total_value * val / 100.0;
             GM_setValue("shizhi_" + fcode, total_value);
+            var fene = $$(this).find($$("td span"))[2].innerHTML.split('&nbsp;/&nbsp;');
+            GM_setValue("fene_" + fcode, [parseFloat(fene[0]), parseFloat(fene[1])]);
             if (oval !== undefined) {
                 $$(this).append('<td><select style="width: 75px;" id="shuhui_' + fcode + '"></select>');
                 $$.each(oval, function(idx) {
@@ -106,28 +108,54 @@ function ttcalcjijin() {
     $$(".qingchusj").click(cleardata);
 }
 
+function toFixed2(x) {
+    return x.toFixed(2)
+}
+
 console.log("function def end")
 
 function updateguzhi() {
     if (!jjjprocessed['updateguzhi']) {
         $$("#kf_m_0 thead tr th").each(function(idx) {
+            if (idx == 0) {
+                $$(this).html($$(this).html() + '<input type="button" id="togglezero" value="隐藏0"/>');
+                $$("#togglezero").click(function() { $$("#kf_m_0 tbody td").filter(function() { return this.innerHTML == '0/0';}).parent().toggle(); });
+            }
             if (idx == 3) $$(this).after("<th id=\"guzhi_zengzhang\">增长值</th>");
             if (idx == 7) $$(this).after("<th id=\"jingzhi_zengzhang\">增长值</th>");
         });
         jjjprocessed['updateguzhi'] = true;
     }
-    $$("#guzhi_zengzhang").html('0')
-    $$("#jingzhi_zengzhang").html('0')
+    $$("#guzhi_zengzhang").html('0');
+    $$("#jingzhi_zengzhang").html('0');
+    var v_sum_guzhi = [0, 0], v_sum_jingzhi = [0, 0];
     $$("#kf_m_0 tbody tr").each(function(idx) {
         var fcode = $$(this).find($$(".jc a")).toArray()[0].innerHTML;
-        var value_price = GM_getValue("shizhi_" + fcode);
-        if (value_price == undefined) value_price = 0.0;
+        var value_price = GM_getValue("fene_" + fcode);
+        if (value_price == undefined) value_price = [0.0, 0.0];
         if (($$(this).find($$("#guzhizengzhang_" + fcode))).toArray().length == 0) {
             $$(this).find($$("td")).each(function(idx) {
                 if (idx == 3) $$(this).after('<td id="guzhizengzhang_' + fcode + '"></td>');
                 if (idx == 7) $$(this).after('<td id="jingzhizengzhang_' + fcode + '"></td>');
             });
         }
+        var v_jingzhigusuan, v_zuixinjingzhi, v_shangqijingzhi;
+        $$(this).find($$("td")).each(function(idx) {
+            if (idx == 2) v_jingzhigusuan = parseFloat($$(this).html());
+            if (idx == 5) v_zuixinjingzhi = parseFloat($$(this).html());
+            if (idx == 10) v_shangqijingzhi = parseFloat($$(this).html());
+        });
+        var v_guzhi_zengzhang = [parseFloat(((v_jingzhigusuan - v_shangqijingzhi) * (value_price[0])).toFixed(2))
+        						,parseFloat(((v_jingzhigusuan - v_shangqijingzhi) * (value_price[1])).toFixed(2))];
+        var v_jingzhi_zengzhang = [parseFloat(((v_zuixinjingzhi - v_shangqijingzhi) * (value_price[0])).toFixed(2))
+                                  ,parseFloat(((v_zuixinjingzhi - v_shangqijingzhi) * (value_price[1])).toFixed(2))];
+        $$(this).find($$("#guzhizengzhang_" + fcode)).html(v_guzhi_zengzhang.join('/'));
+        $$(this).find($$("#jingzhizengzhang_" + fcode)).html(v_guzhi_zengzhang.join('/'));
+        v_sum_guzhi[0] += v_guzhi_zengzhang[0];
+        v_sum_guzhi[1] += v_guzhi_zengzhang[1];
+        v_sum_jingzhi[0] += v_jingzhi_zengzhang[0];
+        v_sum_jingzhi[1] += v_jingzhi_zengzhang[1];
+        /*
         var guzhi_zengzhanglv, jingzhi_zengzhanglv;
         $$(this).find($$("td")).each(function(idx) {
             if (idx == 3) guzhi_zengzhanglv = parseFloat($$(this).html().split('%')[0]);
@@ -137,9 +165,10 @@ function updateguzhi() {
         $$(this).find($$("#jingzhizengzhang_" + fcode)).html((value_price * jingzhi_zengzhanglv / 100.0).toFixed(2));
         $$("#guzhi_zengzhang").html((parseFloat($$("#guzhi_zengzhang").html()) + (value_price * guzhi_zengzhanglv / 100.0)).toFixed(2));
         $$("#jingzhi_zengzhang").html((parseFloat($$("#jingzhi_zengzhang").html()) + (value_price * jingzhi_zengzhanglv / 100.0)).toFixed(2));
+        */
     });
-    $$("#guzhi_zengzhang").html("增长值(" + $$("#guzhi_zengzhang").html() + ")")
-    $$("#jingzhi_zengzhang").html("增长值(" + $$("#jingzhi_zengzhang").html() + ")")
+    $$("#guzhi_zengzhang").html("增长值(" + v_sum_guzhi.map(toFixed2).join('/') + ")")
+    $$("#jingzhi_zengzhang").html("增长值(" + v_sum_jingzhi.map(toFixed2).join('/') + ")")
 }
 
 function parsesxf(fcode) {
