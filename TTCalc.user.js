@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015012511
+// @version      2015012612
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -34,12 +34,15 @@ GM_xmlhttpRequest({
 */
 
 $$.each(GM_listValues(), function(idx, key) {
-    if (/^feilv_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key)) {
+    if (/^feilv_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key) || /^hidezero$/.test(key)) {
         console.log(key, GM_getValue(key));
   	} else {
 	  	GM_deleteValue(key);
   	}
 });
+
+hidezero = GM_getValue("hidezero");
+if (hidezero == undefined) { hidezero = false; GM_setValue("hidezero", false); }
 
 
 totalbenefit_all = 0.0;
@@ -118,8 +121,14 @@ function updateguzhi() {
     if (!jjjprocessed['updateguzhi']) {
         $$("#kf_m_0 thead tr th").each(function(idx) {
             if (idx == 0) {
-                $$(this).html($$(this).html() + '<input type="button" id="togglezero" value="隐藏0"/>');
-                $$("#togglezero").click(function() { $$("#kf_m_0 tbody td").filter(function() { return this.innerHTML == '0/0';}).parent().toggle(); });
+                $$(this).html($$(this).html() + '<input type="button" id="togglezero" value="隐藏显示0"/>');
+                $$("#togglezero").click(function() { 
+                    var totoggle = $$("#kf_m_0 tbody td").filter(function() { return this.innerHTML == '0/0';}).parent();
+                    if (hidezero) totoggle.show();
+                    else totoggle.hide();
+                    hidezero = hidezero ? false : true;
+                    GM_setValue("hidezero", hidezero);
+                });
             }
             if (idx == 3) $$(this).after("<th id=\"guzhi_zengzhang\">增长值</th>");
             if (idx == 7) $$(this).after("<th id=\"jingzhi_zengzhang\">增长值</th>");
@@ -159,6 +168,9 @@ function updateguzhi() {
         v_sum_guzhis[1] += v_guzhi_shangqi[1];
         v_sum_jingzhi[0] += v_jingzhi_zengzhang[0];
         v_sum_jingzhi[1] += v_jingzhi_zengzhang[1];
+        if (($$("#guzhizengzhang_" + fcode).text() == "0/0" || $$("#jingzhizengzhang_" + fcode).text() == "0/0") && hidezero) {
+            $$(this).hide();
+        }
         /*
         var guzhi_zengzhanglv, jingzhi_zengzhanglv;
         $$(this).find($$("td")).each(function(idx) {
