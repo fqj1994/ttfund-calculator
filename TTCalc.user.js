@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015012613
+// @version      2015021709
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -55,7 +55,7 @@ function cleardata() {
 }
 
 function workwork(prefix, fff) {
-    if ($$(prefix + " thead") && !jjjprocessed[prefix]) {
+    if ($$(prefix + " thead").text().indexOf("基金代码") != -1 && !jjjprocessed[prefix]) {
 		$$(prefix + " thead tr").append("<th>卖出手续费<br/>(<a class=\"qingchusj\">清除数据</a>)</th><th>扣除后收益</th>");
        	jjjprocessed[prefix] = true;
         var total_shouyi = 0;
@@ -107,7 +107,9 @@ function workwork(prefix, fff) {
 function ttcalcjijin() {
     workwork("#tb_0_0", ["#pft0", "#fund_benifit"]);
     workwork("#tb_0_zs", ["#zs_benifit"]);
-    $$("#all_value").html($$("#all_value").html().split("(")[0] + "(" + (totalbenefit_all >= 0 ? "+": "") + totalbenefit_all.toFixed(2)  + ")");
+    var all_sxf = parseFloat($$("#fund_benifit").html().split('(')[0]) - parseFloat($$("#fund_benifit").html().split('(')[1].split(')')[0]);
+    all_sxf += (parseFloat($$("#zs_benifit").html().split('(')[0]) - parseFloat($$("#zs_benifit").html().split('(')[1].split(')')[0]));
+    $$("#all_value").html($$("#all_value").html().split("(")[0] + "(" + (parseFloat($$("#all_value").html().split("(")[0]) - all_sxf).toFixed(2) + "," + (totalbenefit_all >= 0 ? "+": "") + totalbenefit_all.toFixed(2)  + ")");
     $$(".qingchusj").click(cleardata);
 }
 
@@ -214,7 +216,7 @@ function parsesxf(fcode) {
     });
 }
 
-if (window.location.pathname.search(/\/MyAssets\/Default/i) == 0) {
+if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0) {
     $$.each(GM_listValues(), function(idx, key) {
         if (/^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key)) {
             GM_deleteValue(key);
