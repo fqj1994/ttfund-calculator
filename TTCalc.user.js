@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015021709
+// @version      2015031214
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
 // @include      http://fund.eastmoney.com/favor.html
+// @include      http://fund.eastmoney.com/favor/
 // @include      http://fund.eastmoney.com/f10/*
 // @require      http://cdn.staticfile.org/jquery/2.1.1-rc2/jquery.min.js
 // @grant        GM_xmlhttpRequest
@@ -224,7 +225,7 @@ if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0) {
     });
     $$("#zspro span.alinks").hide();
 	setInterval(ttcalcjijin, 2000);
-} else if (window.location.pathname.search(/\/favor\.html/i) == 0) {
+} else if (window.location.pathname.search(/\/favor(\.html|\/)/i) == 0) {
     updateguzhi();
 	setInterval(updateguzhi, 2000);
 } else if (window.location.pathname.search(/\/f10\/jjfl_.*/i) == 0) {
