@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015031614
+// @version      2015031615
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -18,6 +18,12 @@
 // @grant        GM_deleteValue
 // @grant        GM_listValues
 // ==/UserScript==
+
+features = {
+    estimate_favor: true,
+    deduct_fund_charge: true,
+    monthly_report: true
+}
 
 $$ = jQuery;
 
@@ -337,7 +343,7 @@ function after_check_lsjz_status() {
     $$("#bill_calc").val("计算结束（点击重算）").prop('disabled', false);
 }
 
-if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0) {
+if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0 && features.deduct_fund_charge) {
     $$.each(GM_listValues(), function(idx, key) {
         if (/^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key)) {
             GM_deleteValue(key);
@@ -345,13 +351,13 @@ if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0) {
     });
     $$("#zspro span.alinks").hide();
 	setInterval(ttcalcjijin, 2000);
-} else if (window.location.pathname.search(/\/favor(\.html|\/)/i) == 0) {
+} else if (window.location.pathname.search(/\/favor(\.html|\/)/i) == 0 && features.estimate_favor) {
     updateguzhi();
 	setInterval(updateguzhi, 2000);
 } else if (window.location.pathname.search(/\/f10\/jjfl_.*/i) == 0) {
     var fcode = window.location.pathname.split('_')[1].split('.')[0];
     parsesxf(fcode);
-} else if (window.location.pathname.search(/\/query\/bill.*/i) == 0) {
+} else if (window.location.pathname.search(/\/query\/bill.*/i) == 0 && features.monthly_report) {
     $$(".bill_person").html($$(".bill_person").html() + "<input type=\"button\" id=\"bill_calc\" value=\"所有数据加载完成后点此计算\" />");
     $$("#bill_calc").click(function() { $$("#analysis").remove(); $$("#bill_calc").prop("disabled", true); bill_calc(); });
 }
