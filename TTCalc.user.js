@@ -1,13 +1,16 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015031214
+// @version      2015031614
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
+// @include      https://trade2.1234567.com.cn/*
 // @include      http://fund.eastmoney.com/favor.html
 // @include      http://fund.eastmoney.com/favor/
 // @include      http://fund.eastmoney.com/f10/*
+// @include      https://trade.1234567.com.cn/Query/bill*
+// @include      https://trade2.1234567.com.cn/Query/bill*
 // @require      http://cdn.staticfile.org/jquery/2.1.1-rc2/jquery.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
@@ -36,7 +39,7 @@ GM_xmlhttpRequest({
 
 $$.each(GM_listValues(), function(idx, key) {
     if (/^feilv_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key) || /^hidezero$/.test(key)) {
-        console.log(key, GM_getValue(key));
+        //console.log(key, GM_getValue(key));
   	} else {
 	  	GM_deleteValue(key);
   	}
@@ -117,8 +120,6 @@ function ttcalcjijin() {
 function toFixed2(x) {
     return x.toFixed(2)
 }
-
-console.log("function def end")
 
 guzhi_changing = {}
 guzhi_last = {}
@@ -217,6 +218,125 @@ function parsesxf(fcode) {
     });
 }
 
+
+
+function get_jingzhi_history(jjcode, year, month) {
+    days = [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    lishi_jingzhi[jjcode] = {};
+    if (year % 400 == 0 || (year % 100 != 0 && year % 4 == 0)) days[2] = 29;
+    sdate = year + "-" + month + "-01";
+    edate = year + "-" + month + "-" + days[parseInt(month)];
+    GM_xmlhttpRequest({
+        method:"GET",
+        url:"http://fund.eastmoney.com/f10/F10DataApi.aspx?type=lsjz&code=" + jjcode + "&page=1&per=50&sdate=" + sdate + "&edate=" + edate + "&rt=" + Math.random(),
+        onload: function(data) {
+            eval(data.response);
+            $$(apidata.content).find("tbody tr").each(function(idx) {
+                var jzdate = $$(this).find("td")[0].innerHTML;
+                var jzz = parseFloat($$(this).find("td")[1].innerHTML);
+                if (idx == 0) lishi_jingzhi[jjcode].last = jzz;
+                lishi_jingzhi[jjcode][jzdate] = jzz;
+                lishi_jingzhi[jjcode].first = jzz;
+            });
+            lishi_jingzhi[jjcode].done = true;
+        }
+    });
+}
+
+function bill_calc() {
+    chiyou = {};
+    lishi_jingzhi = {}
+    bill_jjid2name = {}
+    $$("#bill_calc").val("正在处理月末持仓");
+    $$("#billholdtable").find($$("tr")).each(function(idx) {
+        if (idx > 1) {
+            var idid = $$(this).find($$("td"))[0].innerHTML;
+            if (idid.length < 6) return;        
+            chiyou[idid] = parseFloat($$(this).find($$("td"))[5].innerHTML);
+            bill_jjid2name[idid] = $$(this).find($$("td"))[1].innerHTML;
+        }
+    });
+    $$("#bill_calc").val("正在根据交易记录推导月初持仓");
+    $$("#billtradetable").find($$("tr")).each(function(idx) {
+        if (idx > 0) {
+            var idid = $$(this).find($$("td"))[1].innerHTML;
+            var tradetype = $$(this).find($$("td"))[3].innerHTML;
+            var fene = parseFloat($$(this).find($$("td"))[5].innerHTML);
+            if (chiyou[idid] == undefined) chiyou[idid] = 0.0;
+            if (tradetype == "买基金确认" || tradetype == "强行调增" || tradetype == "转换转入确认") {
+                chiyou[idid] -= fene;
+            } else if (tradetype == "卖基金确认" || tradetype == "转换确认") {
+                chiyou[idid] += fene;
+            } else if (tradetype == "活期宝充值" || tradetype == "普通取现" || tradetype == "卖基金到活期宝") {
+                delete chiyou[idid];
+            } else {
+                console.log("未知交易类型：" + tradetype + "。忽略。");
+            }
+            bill_jjid2name[idid] = $$(this).find($$("td"))[2].innerHTML;
+        }
+    });
+    $$("#bill_calc").val("正在获取历史净值");
+    for (var jjcode in chiyou) {
+        lishi_jingzhi[jjcode] = {};
+        get_jingzhi_history(jjcode,$$("#ctl00_body_ddYear").val(),$$("#ctl00_body_bill_date").val());
+    }
+    setTimeout(after_check_lsjz_status, 1000);
+}
+
+function after_check_lsjz_status() {
+    for (var jjcode in lishi_jingzhi) {
+        if (lishi_jingzhi[jjcode].done != true) {
+            setTimeout(after_check_lsjz_status, 1000);
+            return;
+        }
+    }
+    var chengben = {}
+    $$("<div class=\"bill_table\"><table id=\"analysis\" class=\"b1\"><thead><tr><th>日期</th><th>基金</th><th>份额</th><th>净值</th><th>价值</th><th>增长</th></tr></thead><tbody></tbody></table></div>").insertAfter(".bill_person");
+    for (var jjcode in lishi_jingzhi) {
+        var tfene = chiyou[jjcode];
+        var tjingzhi = lishi_jingzhi[jjcode].first;
+        chengben[jjcode] = tfene * tjingzhi;
+        $$("#analysis tbody").append("<tr><td>月初</td><td>" + jjcode + "(" + bill_jjid2name[jjcode] + ")" + "</td><td>" + tfene.toFixed(2) + "</td><td>" + tjingzhi + "</td><td>" + (tfene * tjingzhi).toFixed(2) + "</td><td>" + (tfene * tjingzhi - chengben[jjcode]).toFixed(2) + "</td></tr>");
+    }
+    console.log(lishi_jingzhi);
+    $$($$("#billtradetable").find($$("tr")).get().reverse()).each(function(idx) {
+        if ($$(this).find($$("td"))[1]) {
+            var idid = $$(this).find($$("td"))[1].innerHTML;
+            var tradetype = $$(this).find($$("td"))[3].innerHTML;
+            var fene = parseFloat($$(this).find($$("td"))[5].innerHTML);
+            if (chiyou[idid] == undefined) return;
+            if (tradetype == "买基金确认" || tradetype == "强行调增" || tradetype == "转换转入确认") {
+                chiyou[idid] += fene;
+                chengben[idid] += parseFloat($$(this).find($$("td"))[6].innerHTML);
+            } else if (tradetype == "卖基金确认" || tradetype == "转换确认") {
+                chiyou[idid] -= fene;
+                chengben[idid] -= parseFloat($$(this).find($$("td"))[6].innerHTML);
+            } else {
+                return;
+            }
+            var tfene = chiyou[idid];
+            var tjingzhi = parseFloat($$(this).find($$("td"))[8].innerHTML);
+            if (tjingzhi == 0.0) {
+                var tjingzhi = lishi_jingzhi[idid][$$(this).find($$("td"))[0].innerHTML];
+            }
+            $$("#analysis tbody").append("<tr><td>" + $$(this).find($$("td"))[0].innerHTML + "</td><td>" + idid + "(" + bill_jjid2name[idid] + ")" + "</td><td>" + tfene.toFixed(2) + "</td><td>" + tjingzhi + "</td><td>" + (tfene * tjingzhi).toFixed(2) + "</td><td>" + (tfene * tjingzhi - chengben[idid]).toFixed(2) + "</td></tr>");
+        }
+    });
+    for (var jjcode in lishi_jingzhi) {
+        var tfene = chiyou[jjcode];
+        var tjingzhi = lishi_jingzhi[jjcode].last;
+        $$("#analysis tbody").append("<tr><td>月底/当前</td><td>" + jjcode + "(" + bill_jjid2name[jjcode] + ")" + "</td><td>" + tfene.toFixed(2) + "</td><td>" + tjingzhi + "</td><td>" + (tfene * tjingzhi).toFixed(2) + "</td><td>" + (tfene * tjingzhi - chengben[jjcode]).toFixed(2) + "</td></tr>");
+    }
+    var zongji = 0.0;
+    var zongchengben = 0.0;
+    for (var jjcode in lishi_jingzhi) {
+        zongji += chiyou[jjcode] * lishi_jingzhi[jjcode].last;
+        zongchengben += chengben[jjcode];
+    }
+    $$("#analysis tbody").append("<tr><td>月底/当前</td><td>总计</td><td></td><td></td><td>" + zongji.toFixed(2) + "</td><td>" + (zongji - zongchengben).toFixed(2) + "</td></tr>");
+    $$("#bill_calc").val("计算结束（点击重算）").prop('disabled', false);
+}
+
 if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0) {
     $$.each(GM_listValues(), function(idx, key) {
         if (/^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key)) {
@@ -231,6 +351,7 @@ if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0) {
 } else if (window.location.pathname.search(/\/f10\/jjfl_.*/i) == 0) {
     var fcode = window.location.pathname.split('_')[1].split('.')[0];
     parsesxf(fcode);
+} else if (window.location.pathname.search(/\/query\/bill.*/i) == 0) {
+    $$(".bill_person").html($$(".bill_person").html() + "<input type=\"button\" id=\"bill_calc\" value=\"所有数据加载完成后点此计算\" />");
+    $$("#bill_calc").click(function() { $$("#analysis").remove(); $$("#bill_calc").prop("disabled", true); bill_calc(); });
 }
-    
-console.log("process end")
