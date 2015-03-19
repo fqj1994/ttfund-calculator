@@ -74,37 +74,47 @@ function workwork(prefix, fff) {
             if ($$(this).attr('class') == "hideTr hide") {
                 return;
             }
-            var oval = GM_getValue("feilv_" + fcode);
-            var val = 0.0;
-            if (oval === undefined) {
-            	val = 0.0
-            } else {
-                val = oval[0][1];
-            }
+            
             var original_shouyi = parseFloat($$(this).find($$("td span"))[4].innerHTML);
             var total_value = parseFloat($$(this).find($$("td span"))[3].innerHTML);
-            var real_shouyi = original_shouyi - total_value * val / 100.0;
+            var real_shouyi = original_shouyi;
             GM_setValue("shizhi_" + fcode, total_value);
             var fene = $$(this).find($$("td span"))[2].innerHTML.split('&nbsp;/&nbsp;');
             GM_setValue("fene_" + fcode, [parseFloat(fene[0]), parseFloat(fene[1])]);
-            if (oval !== undefined) {
-                $$(this).append('<td><select style="width: 75px;" id="shuhui_' + fcode + '"></select>');
+            var oval = GM_getValue("feilv_" + fcode);
+            var op = function(tthis) {
+                var oval = GM_getValue("feilv_" + fcode);
+                var val = 0.0;
+                if (oval === undefined) {
+                    val = 0.0
+                } else {
+                    val = oval[0][1];
+                }
+                real_shouyi = original_shouyi - total_value * val / 100.0;
+                $$(tthis).append('<td><select style="width: 75px;" id="shuhui_' + fcode + '"></select>');
                 $$.each(oval, function(idx) {
                     var apdxstr = '';
                     if (idx == 0) apdxstr = ' selected=selected';
                     $$("#shuhui_" + fcode).append('<option value="' + oval[idx][1] + '"' + apdxstr + '>' + oval[idx][0] + '</option>');
                 });
                 $$("#shuhui_" + fcode).change(function() {
-                    var feilvs = $$(this).find($$("option:selected")).text();
+                    var feilvs = $$(tthis).find($$("option:selected")).text();
                     var feilvv = parseFloat($$(this).find($$("option:selected")).val());
                     oval[0] = [feilvs, feilvv];
                     GM_setValue("feilv_" + fcode, oval);
                 });
-            } else {
-                $$(this).append('<td><a target="_blank" href="http://fund.eastmoney.com/f10/jjfl_' + fcode + '.html">点击获取</a></td>')
+                $$(tthis).append('<td><span id="shouyi_' + fcode + '">' + real_shouyi.toFixed(2) + '(' +  (real_shouyi * 100.0 / (total_value - original_shouyi)).toFixed(2) +'%)</span></td>');
             }
+            if (oval == undefined) {
+                var tthis = this;
+                GM_xmlhttpRequest({method: 'get', url: 'http://fund.eastmoney.com/f10/jjfl_' + fcode + '.html',
+                                   onload: function(data) {
+                                       var html = data.responseText;
+                                       parsesxf(html, fcode);
+                                       op(tthis);
+                                   }});
+            } else op(this);
             $$("#shuhui_" + fcode).change(function() { updatesxf(fcode) });
-            $$(this).append('<td><span id="shouyi_' + fcode + '">' + real_shouyi.toFixed(2) + '(' +  (real_shouyi * 100.0 / (total_value - original_shouyi)).toFixed(2) +'%)</span></td>');
             total_shouyi += parseFloat(real_shouyi.toFixed(2));
         });
         $$.each(fff, function(idx) {
@@ -143,11 +153,13 @@ function updateguzhi() {
                     GM_setValue("hidezero", hidezero);
                 });
             }
+            if (idx == 1) $$(this).hide();
             if (idx == 3) $$(this).after("<th id=\"guzhi_zengzhang\">增长值</th>");
             if (idx == 7) $$(this).after("<th id=\"jingzhi_zengzhang\">增长值</th>");
         });
         jjjprocessed['updateguzhi'] = true;
     }
+    $$(".xglj").hide();
     $$("#guzhi_zengzhang").html('0');
     $$("#jingzhi_zengzhang").html('0');
     var v_sum_guzhi = [0, 0], v_sum_jingzhi = [0, 0];
@@ -198,8 +210,8 @@ function updateguzhi() {
     $$("#jingzhi_zengzhang").html("增长值(" + v_sum_jingzhi.map(toFixed2).join('/') + ")")
 }
 
-function parsesxf(fcode) {
-    $$(".w790").each(function(idx) {
+function parsesxf(doc, fcode) {
+    $$(doc).find(".w790").each(function(idx) {
         if ($$(this).html().indexOf("赎回费率") != -1 && $$(this).html().indexOf("适用金额") != -1) {
             var feilv = [["请选择赎回费率", NaN]];
             var chosen_feilv = undefined;
@@ -207,9 +219,9 @@ function parsesxf(fcode) {
                 chosen_feilv = GM_getValue("feilv_" + fcode)[0];
             }
             var chosen_feilv_valid = false;
-            $$(this).find($$("tbody tr")).each(function(idx) {
+            $$(this).find("tbody tr").each(function(idx) {
                 var feilvdesc = $$(this).text().replace(/-*/i, '');
-                var feilvv = parseFloat($$(this).find($$("td")).last().text().split('%')[0])
+                var feilvv = parseFloat($$(this).find("td").last().text().split('%')[0])
                 feilvdesc = feilvv + "% (" + feilvdesc + ")";
                 feilv.push([feilvdesc, feilvv]);
                 if (chosen_feilv == [feilvdesc, feilvv]) {
@@ -343,7 +355,7 @@ function after_check_lsjz_status() {
     $$("#bill_calc").val("计算结束（点击重算）").prop('disabled', false);
 }
 
-if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0 && features.deduct_fund_charge) {
+if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0 && features.deduct_fund_charge	) {
     $$.each(GM_listValues(), function(idx, key) {
         if (/^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key)) {
             GM_deleteValue(key);
@@ -356,7 +368,7 @@ if (window.location.pathname.search(/\/+MyAssets\/Default/i) == 0 && features.de
 	setInterval(updateguzhi, 2000);
 } else if (window.location.pathname.search(/\/f10\/jjfl_.*/i) == 0) {
     var fcode = window.location.pathname.split('_')[1].split('.')[0];
-    parsesxf(fcode);
+    parsesxf($$("html").html(), fcode);
 } else if (window.location.pathname.search(/\/query\/bill.*/i) == 0 && features.monthly_report) {
     $$(".bill_person").html($$(".bill_person").html() + "<input type=\"button\" id=\"bill_calc\" value=\"所有数据加载完成后点此计算\" />");
     $$("#bill_calc").click(function() { $$("#analysis").remove(); $$("#bill_calc").prop("disabled", true); bill_calc(); });
