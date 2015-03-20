@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015031615
+// @version      2015032004
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -153,7 +153,7 @@ function updateguzhi() {
                     GM_setValue("hidezero", hidezero);
                 });
             }
-            if (idx == 1) $$(this).hide();
+            if (idx == 1 || idx == 10 || idx == 9) $$(this).hide();
             if (idx == 3) $$(this).after("<th id=\"guzhi_zengzhang\">增长值</th>");
             if (idx == 7) $$(this).after("<th id=\"jingzhi_zengzhang\">增长值</th>");
         });
@@ -171,6 +171,7 @@ function updateguzhi() {
             $$(this).find($$("td")).each(function(idx) {
                 if (idx == 3) $$(this).after('<td id="guzhizengzhang_' + fcode + '"></td>');
                 if (idx == 7) $$(this).after('<td id="jingzhizengzhang_' + fcode + '"></td>');
+                if (idx == 9 || idx == 10) $$(this).hide();
             });
         }
         var v_jingzhigusuan, v_zuixinjingzhi, v_shangqijingzhi, v_zuixin_date;
