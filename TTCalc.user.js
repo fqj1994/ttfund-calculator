@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015032004
+// @version      2015040904
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
@@ -199,8 +199,10 @@ function updateguzhi() {
                                   ,parseFloat(((v_zuixinjingzhi - v_shangqijingzhi) * (value_price[1])).toFixed(2))];
         $$(this).find($$("#guzhizengzhang_" + fcode)).html(v_guzhi_zengzhang.join('/'));
         $$(this).find($$("#jingzhizengzhang_" + fcode)).html(v_jingzhi_zengzhang.join('/'));
-        v_sum_guzhi[0] += v_guzhi_zengzhang[0];
-        v_sum_guzhi[1] += v_guzhi_zengzhang[1];
+        if (v_guzhi_zengzhang[0].toFixed(2) != "NaN") {
+            v_sum_guzhi[0] += v_guzhi_zengzhang[0];
+            v_sum_guzhi[1] += v_guzhi_zengzhang[1];
+        }
         v_sum_jingzhi[0] += v_jingzhi_zengzhang[0];
         v_sum_jingzhi[1] += v_jingzhi_zengzhang[1];
         if (($$("#guzhizengzhang_" + fcode).text() == "0/0" || $$("#jingzhizengzhang_" + fcode).text() == "0/0") && hidezero) {
