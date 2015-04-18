@@ -1,16 +1,15 @@
 // ==UserScript==
 // @name         TTCalc
 // @namespace    ttcalc
-// @version      2015040904
+// @version      2015041807
 // @description  Some Automatic Calculator for Tian Tian Fund
 // @author       Qijiang Fan
 // @include      https://trade.1234567.com.cn/*
 // @include      https://trade2.1234567.com.cn/*
+// @include      https://trade3.1234567.com.cn/*
 // @include      http://fund.eastmoney.com/favor.html
 // @include      http://fund.eastmoney.com/favor/
 // @include      http://fund.eastmoney.com/f10/*
-// @include      https://trade.1234567.com.cn/Query/bill*
-// @include      https://trade2.1234567.com.cn/Query/bill*
 // @require      http://cdn.staticfile.org/jquery/2.1.1-rc2/jquery.min.js
 // @grant        GM_xmlhttpRequest
 // @grant        GM_getValue
@@ -33,15 +32,6 @@ jjjprocessed = {
     'updateguzhi': false,
 }
 
-/*
-GM_xmlhttpRequest({
-    'method': 'get',
-    'url': 'http://fund.eastmoney.com/',
-    'onload': function(data) {
-        console.log(data);
-    }
-});
-*/
 
 $$.each(GM_listValues(), function(idx, key) {
     if (/^feilv_[0-9]{6}$/.test(key) || /^shizhi_[0-9]{6}$/.test(key) || /^fene_[0-9]{6}$/.test(key) || /^hidezero$/.test(key)) {
